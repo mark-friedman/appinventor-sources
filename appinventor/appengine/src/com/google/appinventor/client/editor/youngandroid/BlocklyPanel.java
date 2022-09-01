@@ -282,9 +282,9 @@ public class BlocklyPanel extends HTMLPanel {
     }
   }
 
-  public void startRepl(boolean alreadyRunning, boolean forChromebook, boolean forEmulator, boolean forUsb) { // Start the Repl
+  public String startRepl(boolean alreadyRunning, boolean forChromebook, boolean forEmulator, boolean forUsb) { // Start the Repl
     makeActive();
-    doStartRepl(alreadyRunning, forChromebook, forEmulator, forUsb);
+    return doStartRepl(alreadyRunning, forChromebook, forEmulator, forUsb);
   }
 
   public void hardReset() {
@@ -856,8 +856,8 @@ public class BlocklyPanel extends HTMLPanel {
     }
   }-*/;
 
-  public native void doStartRepl(boolean alreadyRunning, boolean forChromebook, boolean forEmulator, boolean forUsb) /*-{
-    Blockly.ReplMgr.startRepl(alreadyRunning, forChromebook, forEmulator, forUsb);
+  public native String doStartRepl(boolean alreadyRunning, boolean forChromebook, boolean forEmulator, boolean forUsb) /*-{
+    return Blockly.ReplMgr.startRepl(alreadyRunning, forChromebook, forEmulator, forUsb);
   }-*/;
 
   public native void doHardReset() /*-{

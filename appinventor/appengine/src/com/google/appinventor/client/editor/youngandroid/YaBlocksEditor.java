@@ -44,7 +44,6 @@ import com.google.common.collect.Maps;
 import com.google.gwt.core.client.Callback;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArrayString;
-import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
 import com.google.gwt.user.client.Command;
@@ -655,8 +654,8 @@ public final class YaBlocksEditor extends FileEditor
    * Start up the Repl (call into the Blockly.ReplMgr via the BlocklyPanel.
    */
   @Override
-  public void startRepl(boolean alreadyRunning, boolean forChromebook, boolean forEmulator, boolean forUsb) {
-    blocksArea.startRepl(alreadyRunning, forChromebook, forEmulator, forUsb);
+  public String startRepl(boolean alreadyRunning, boolean forChromebook, boolean forEmulator, boolean forUsb) {
+    return blocksArea.startRepl(alreadyRunning, forChromebook, forEmulator, forUsb);
   }
 
   /*

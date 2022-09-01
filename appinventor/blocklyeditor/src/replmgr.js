@@ -1388,6 +1388,8 @@ Blockly.ReplMgr.startRepl = function(already, chromebook, emulator, usb) {
         rs = top.ReplState;
         rs.state = this.rsState.RENDEZVOUS; // We are now rendezvousing
         rs.replcode = this.genCode();
+        // TODO: Add "remote" boolean parameter and use that to open the Appetize window similar to how it's done here
+        // for chromebook.  Then I wouldn't need to pass the code back up the chain.
         if (chromebook) {
             window.open("intent://comp/" + rs.replcode + "#Intent;scheme=aicompanion;package=" +
                         top.ACCEPTABLE_COMPANION_PACKAGE +
@@ -1422,6 +1424,7 @@ Blockly.ReplMgr.startRepl = function(already, chromebook, emulator, usb) {
         top.ReplState.state = this.rsState.IDLE;
         this.hardreset(this.formName);       // Tell aiStarter to kill off adb
     }
+    return rs.replcode;
 };
 
 Blockly.ReplMgr.genCode = function() {

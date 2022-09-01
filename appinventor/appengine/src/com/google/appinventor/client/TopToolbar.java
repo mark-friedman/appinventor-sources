@@ -12,7 +12,6 @@ import com.google.appinventor.client.editor.youngandroid.YaBlocksEditor;
 import com.google.appinventor.client.explorer.commands.BuildCommand;
 import com.google.appinventor.client.explorer.commands.ChainableCommand;
 import com.google.appinventor.client.explorer.commands.CopyYoungAndroidProjectCommand;
-import com.google.appinventor.client.explorer.commands.DownloadProjectOutputCommand;
 import com.google.appinventor.client.explorer.commands.GenerateYailCommand;
 import com.google.appinventor.client.explorer.commands.SaveAllEditorsCommand;
 import com.google.appinventor.client.explorer.commands.ShowBarcodeCommand;
@@ -83,6 +82,7 @@ public class TopToolbar extends Composite {
   private static final String WIDGET_NAME_BUILD_YAIL = "Yail";
   private static final String WIDGET_NAME_CONNECT_TO = "ConnectTo";
   private static final String WIDGET_NAME_WIRELESS_BUTTON = "Wireless";
+  private static final String WIDGET_NAME_REMOTE_WIRELESS_BUTTON = "RemoteWireless";
   private static final String WIDGET_NAME_CHROMEBOOK = "Chromebook";
   private static final String WIDGET_NAME_EMULATOR_BUTTON = "Emulator";
   private static final String WIDGET_NAME_USB_BUTTON = "Usb";
@@ -268,7 +268,9 @@ public class TopToolbar extends Composite {
   private void createConnectMenu() {
     List<DropDownItem> connectItems = Lists.newArrayList();
     connectItems.add(new DropDownItem(WIDGET_NAME_WIRELESS_BUTTON,
-        MESSAGES.AICompanionMenuItem(), new WirelessAction()));
+          MESSAGES.AICompanionMenuItem(), new WirelessAction()));
+    connectItems.add(new DropDownItem(WIDGET_NAME_REMOTE_WIRELESS_BUTTON,
+          MESSAGES.RemoteCompanionMenuItem(), new RemoteWirelessAction()));
     if (iamChromebook) {
       connectItems.add(new DropDownItem(WIDGET_NAME_CHROMEBOOK,
           MESSAGES.chromebookMenuItem(), new ChromebookAction()));
@@ -476,6 +478,22 @@ public class TopToolbar extends Composite {
       if (Ode.getInstance().okToConnect()) {
         startRepl(true, false, false, false); // false means we are
                                               // *not* the emulator
+      }
+    }
+  }
+
+  private class RemoteWirelessAction implements Command {
+    @Override
+    public void execute() {
+      if (Ode.getInstance().okToConnect()) {
+        // Ideally, we'd want to open the window before calling startRepl, but we need to call startRepl to
+        // get the repl code to insert in the appetize URL.
+        final String replCode = startRepl(true, false, false, false);
+        final String urlEncodedJSONForReplCode = "&params=%7B%22remote-code%22%3A%22" + replCode + "%22%7D";
+        final String baseAppetizeURL = "https://appetize.io/app/qobehiw6eq2mcyipxa26fxncwq?device=pixel4";
+        final String fullAppetizeURL = baseAppetizeURL + urlEncodedJSONForReplCode;
+        OdeLog.log("appetize URL: " + fullAppetizeURL);
+        Window.open(fullAppetizeURL, "remote companion", "popup,width=400,height=700");
       }
     }
   }
@@ -1002,21 +1020,22 @@ public class TopToolbar extends Composite {
    * If both forEmulator and forUsb are false, then we are connecting
    * via Wireless.
    *
-   * @param start -- true to start the repl, false to stop it.
+   * @param start         -- true to start the repl, false to stop it.
    * @param forChromebook -- true if we are connecting to a chromebook.
-   * @param forEmulator -- true if we are connecting to the emulator.
-   * @param forUsb -- true if this is a USB connection.
+   * @param forEmulator   -- true if we are connecting to the emulator.
+   * @param forUsb        -- true if this is a USB connection.
+   * @return
    */
 
-  private void startRepl(boolean start, boolean forChromebook, boolean forEmulator, boolean forUsb) {
+  private String startRepl(boolean start, boolean forChromebook, boolean forEmulator, boolean forUsb) {
     DesignToolbar.DesignProject currentProject = Ode.getInstance().getDesignToolbar().getCurrentProject();
     if (currentProject == null) {
       OdeLog.wlog("DesignToolbar.currentProject is null. "
             + "Ignoring attempt to start the repl.");
-      return;
+      return null;
     }
     DesignToolbar.Screen screen = currentProject.screens.get(currentProject.currentScreen);
-    screen.blocksEditor.startRepl(!start, forChromebook, forEmulator, forUsb);
+    final String replCode = screen.blocksEditor.startRepl(!start, forChromebook, forEmulator, forUsb);
     if (start) {
       if (forEmulator) {        // We are starting the emulator...
         updateConnectToDropDownButton(true, false, false);
@@ -1028,6 +1047,7 @@ public class TopToolbar extends Composite {
     } else {
       updateConnectToDropDownButton(false, false, false);
     }
+    return replCode;
   }
 
   private void replHardReset() {

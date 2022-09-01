@@ -143,8 +143,11 @@ public abstract class FileEditor extends Composite {
    * Called to trigger the Repl (Wireless) to start. This version does nothing
    * but the YaBlocksEditor overrides this version with one that start the
    * Repl going.
+   *
+   * @return
    */
-  public void startRepl(boolean alreadyRunning, boolean forChromebook, boolean forEmulator, boolean forUsb) {
+  public String startRepl(boolean alreadyRunning, boolean forChromebook, boolean forEmulator, boolean forUsb) {
+    return null;
   }
 
   /**

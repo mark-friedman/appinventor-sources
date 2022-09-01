@@ -163,6 +163,19 @@ public class ReplForm extends Form {
             startChromebook(data);
           }
         });
+    } else {
+      final String remoteCode = intent.getStringExtra("remote-code");
+      if (remoteCode != null) {
+        Log.d(LOG_TAG, "Got remote code extra = " + remoteCode);
+        registerForOnInitialize(new OnInitializeListener() {
+          @Override
+          public void onInitialize() {
+            processRendezvousCode(remoteCode);
+          }
+        });
+      } else {
+        Log.d(LOG_TAG, "Did not receive any remote code extra data");
+      }
     }
   }
 
@@ -332,6 +345,10 @@ public class ReplForm extends Form {
 
   private void startChromebook(String data) {
     String code = data.substring(data.indexOf("//comp/") + 7);
+    processRendezvousCode(code);
+  }
+
+  private void processRendezvousCode(String code) {
     PhoneStatus status = new PhoneStatus(this);
     status.WebRTC(true);
     code = status.setHmacSeedReturnCode(code, "rendezvous.appinventor.mit.edu");
