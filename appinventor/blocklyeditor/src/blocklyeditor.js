@@ -35,9 +35,6 @@ Blockly.configForTypeBlock = {
   inputText: 'ac_input_text'
 };
 
-Blockly.BlocklyEditor.render = function() {
-};
-
 Blockly.BlocklyEditor.HELP_IFRAME = null;
 
 top.addEventListener('mousedown', function(e) {
@@ -377,7 +374,7 @@ Blockly.unprefixName = function (name) {
  * @returns {Blockly.WorkspaceSvg} A newly created workspace
  */
 Blockly.BlocklyEditor['create'] = function(container, formName, readOnly, rtl) {
-  var workspace = Blockly.inject(container, {
+  var options = {
     'readOnly': readOnly,
     'rtl': rtl,
     'collapse': true,
@@ -387,8 +384,25 @@ Blockly.BlocklyEditor['create'] = function(container, formName, readOnly, rtl) {
     'disable': true,
     'media': './static/media/',
     'grid': {'spacing': '20', 'length': '5', 'snap': true, 'colour': '#ccc'},
-    'zoom': {'controls': true, 'wheel': true, 'scaleSpeed': 1.1, 'maxScale': 3, 'minScale': 0.1}
-  });
+    'zoom': {'controls': true, 'wheel': true, 'scaleSpeed': 1.1, 'maxScale': 3, 'minScale': 0.1},
+    plugins: {
+      blockDragger: top.MultiselectBlockDragger,
+    },
+    useDoubleClick: true,
+    bumpNeighbours: true,
+    multiselectIcon: {
+      hideIcon: false,
+      enabledIcon: 'https://github.com/mit-cml/workspace-multiselect/raw/main/test/media/select.svg',
+      disabledIcon: 'https://github.com/mit-cml/workspace-multiselect/raw/main/test/media/unselect.svg',
+    },
+    multiselectCopyPaste: {
+      crossTab: true,
+      menu: true,
+    },
+  };
+  var workspace = Blockly.inject(container, options);
+  var multiselectPlugin = new top.Multiselect(workspace);
+  multiselectPlugin.init(options);
   Blockly.allWorkspaces[formName] = workspace;
   workspace.formName = formName;
   workspace.screenList_ = [];
@@ -414,46 +428,6 @@ Blockly.BlocklyEditor['create'] = function(container, formName, readOnly, rtl) {
     goog.dom.appendChild(ai_type_block, p);
     goog.dom.appendChild(p, ac_input_text);
     workspace.typeBlock_ = new Blockly.TypeBlock(typeblockOpts, workspace);
-  }
-  return workspace;
-};
-
-/**
- * Inject a previously constructed workspace into the designated
- * container. This implementation is adapted from Blockly's
- * implementation and is required due to the fact that browsers such as
- * Firefox do not initialize SVG elements unless they are visible.
- *
- * @param {!Element|string} container
- * @param {!Blockly.WorkspaceSvg} workspace
- */
-Blockly.ai_inject = function(container, workspace) {
-  Blockly.common.setMainWorkspace(workspace);  // make workspace the 'active' workspace
-  workspace.fireChangeListener(new AI.Events.ScreenSwitch(workspace.projectId, workspace.formName));
-  var gridEnabled = top.BlocklyPanel_getGridEnabled && top.BlocklyPanel_getGridEnabled();
-  var gridSnap = top.BlocklyPanel_getSnapEnabled && top.BlocklyPanel_getSnapEnabled();
-  if (workspace.injected) {
-    workspace.setGridSettings(gridEnabled, gridSnap);
-    // Update the workspace size in case the window was resized while we were hidden
-    setTimeout(function() {
-      goog.array.forEach(workspace.blocksNeedingRendering, function(block) {
-        workspace.getWarningHandler().checkErrors(block);
-        block.render();
-      });
-      workspace.blocksNeedingRendering.splice(0);  // clear the array of pending blocks
-      workspace.resizeContents();
-      Blockly.svgResize(workspace);
-    });
-    return;
-  }
-  var options = workspace.options;
-  var svg = container.querySelector('svg.blocklySvg');
-  svg.cachedWidth_ = svg.clientWidth;
-  svg.cachedHeight_ = svg.clientHeight;
-  // svg.appendChild(workspace.createDom('blocklyMainBackground'));
-  workspace.setGridSettings(gridEnabled, gridSnap);
-  workspace.translate(0, 0);
-  if (!options.readOnly && !options.hasScrollbars) {
     var workspaceChanged = function() {
       if (Blockly.dragMode_ == Blockly.DRAG_NONE) {
         var metrics = workspace.getMetrics();
@@ -497,11 +471,8 @@ Blockly.ai_inject = function(container, workspace) {
         }
       }
     };
-    workspace.addChangeListener(workspaceChanged);
+    //workspace.addChangeListener(workspaceChanged);
   }
-  // The SVG is now fully assembled.
-  Blockly.WidgetDiv.createDom();
-  Blockly.Tooltip.createDom();
   workspace.drawer_ = new Blockly.Drawer(workspace, { scrollbars: true });
   workspace.flyout_ = workspace.drawer_.flyout_;
   var flydown = new Blockly.Flydown(new Blockly.Options({scrollbars: false}));
@@ -512,15 +483,61 @@ Blockly.ai_inject = function(container, workspace) {
   flydown.autoClose = true; // Flydown closes after selecting a block
   workspace.addWarningIndicator();
   workspace.addBackpack();
-  // Blockly.init_(workspace);
-  workspace.markFocused();
-  Blockly.browserEvents.bind(svg, 'focus', workspace, workspace.markFocused);
-  workspace.resize();
+  Blockly.browserEvents.bind(workspace.svgGroup_, 'focus', workspace, workspace.markFocused);
   // Hide scrollbars by default (otherwise ghost rectangles intercept mouse events)
   workspace.flyout_.scrollbar_ && workspace.flyout_.scrollbar_.setContainerVisible(false);
   workspace.backpack_.flyout_.scrollbar_ && workspace.backpack_.flyout_.scrollbar_.setContainerVisible(false);
   workspace.flydown_.scrollbar_ && workspace.flydown_.scrollbar_.setContainerVisible(false);
   // Render blocks created prior to the workspace being rendered.
+  workspace.injecting = false;
+  workspace.injected = true;
+  return workspace;
+};
+
+/**
+ * Inject a previously constructed workspace into the designated
+ * container. This implementation is adapted from Blockly's
+ * implementation and is required due to the fact that browsers such as
+ * Firefox do not initialize SVG elements unless they are visible.
+ *
+ * @param {!Element|string} container
+ * @param {!Blockly.WorkspaceSvg} workspace
+ */
+Blockly.ai_inject = function(container, workspace) {
+  Blockly.common.setMainWorkspace(workspace);  // make workspace the 'active' workspace
+  workspace.fireChangeListener(new AI.Events.ScreenSwitch(workspace.projectId, workspace.formName));
+  var gridEnabled = top.BlocklyPanel_getGridEnabled && top.BlocklyPanel_getGridEnabled();
+  var gridSnap = top.BlocklyPanel_getSnapEnabled && top.BlocklyPanel_getSnapEnabled();
+  if (workspace.injected) {
+    workspace.setGridSettings(gridEnabled, gridSnap);
+    // Update the workspace size in case the window was resized while we were hidden
+    setTimeout(function() {
+      goog.array.forEach(workspace.blocksNeedingRendering, function(block) {
+        workspace.getWarningHandler().checkErrors(block);
+        block.render();
+      });
+      workspace.blocksNeedingRendering.splice(0);  // clear the array of pending blocks
+      workspace.resizeContents();
+      Blockly.svgResize(workspace);
+    });
+    return;
+  }
+  var options = workspace.options;
+  var svg = container.querySelector('svg.blocklySvg');
+  svg.cachedWidth_ = svg.clientWidth;
+  svg.cachedHeight_ = svg.clientHeight;
+  // svg.appendChild(workspace.createDom('blocklyMainBackground'));
+  workspace.setGridSettings(gridEnabled, gridSnap);
+  workspace.translate(0, 0);
+  // The SVG is now fully assembled.
+  Blockly.WidgetDiv.createDom();
+  Blockly.Tooltip.createDom();
+  workspace.addWarningIndicator();
+  workspace.addBackpack();
+  // Blockly.init_(workspace);
+  workspace.markFocused();
+  Blockly.browserEvents.bind(svg, 'focus', workspace, workspace.markFocused);
+  workspace.resize();
   workspace.rendered = true;
   var blocks = workspace.getAllBlocks();
 
